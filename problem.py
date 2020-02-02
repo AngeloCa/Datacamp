@@ -6,7 +6,7 @@ from rampwf.workflows import FeatureExtractorRegressor
 from rampwf.workflows import FeatureExtractorClassifier
 from rampwf.score_types.base import BaseScoreType
 from sklearn.model_selection import GroupShuffleSplit
-from sklearn.metrics import  r2_score, f1_score
+from sklearn.metrics import  f1_score
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -46,11 +46,11 @@ class clfreg(object):
 
         y_train_clf = y_train_array[:, 0].copy()
         y_train_reg = y_train_array[:, 1].copy()
-        #print('X_train_df is =',X_train_df.shape)
+        
         idx = np.where(y_train_reg > 0)[0]
-        #print('1 = ',y_train_reg.shape)
+        
         y_train_reg = y_train_reg[idx]
-        #print('2 = ',y_train_reg.shape)
+        
 
         fe_clf, clf = self.feature_extractor_classifier_workflow.\
             train_submission(module_path, X_train_df, y_train_clf)
@@ -64,7 +64,7 @@ class clfreg(object):
         fe_clf, clf, fe_reg, reg = trained_model
         y_pred_clf = self.feature_extractor_classifier_workflow.\
             test_submission((fe_clf, clf), X_df)
-        # print('y pred clf sh = ',y_pred_clf.shape)
+        
         # Avoid setting with copy warning
         X_df = X_df.copy()
         
@@ -74,7 +74,7 @@ class clfreg(object):
         pred_idx = np.where(labels != 0)[0]
         y_pred_reg = np.full((y_pred_clf.shape[0],), -1)
         
-        ##X_df2[pred_idx, :] = X_df.iloc[pred_idx, :].values
+        
         y_temp = self.feature_extractor_regressor_workflow.\
             test_submission((fe_reg, reg), X_df)
 
@@ -94,15 +94,13 @@ class F1_score(BaseScoreType):
         self.precision = precision
 
     def __call__(self, y_true, y_pred):
-        # print('f1 pred = ',y_pred)
-        # print('f1 true = ',y_true[:,0])
-        labels = np.argmax(y_pred, axis=1)
-        #print('f1', labels[:100], len(labels))
-        #print(len(labels))
-        # print('lab = ',labels)
+      
+        
+        labels = np.argmax(y_pred, axis=1)    
+                
         return 1-f1_score(y_true[:,0], labels)
 
-class R2_score(BaseScoreType):
+class log_score(BaseScoreType):
     is_lower_the_better = True
     minimum = 0.0
     maximum = float('inf')
@@ -117,8 +115,8 @@ class R2_score(BaseScoreType):
         if isinstance(y_true, pd.Series):
             y_true = y_true.values
 
-        max_true = np.maximum(5., np.log10(np.maximum(1., y_true[idx])))
-        max_pred = np.maximum(5., np.log10(np.maximum(1., y_pred[idx])))
+        max_true = np.maximum(3., np.log10(np.maximum(1., y_true[idx])))
+        max_pred = np.maximum(3., np.log10(np.maximum(1., y_pred[idx])))
         
         loss = np.mean(np.abs(max_true - max_pred))
         
@@ -126,7 +124,7 @@ class R2_score(BaseScoreType):
 
 
 score_clf = F1_score()
-score_reg = R2_score()
+score_reg = log_score()
 
 score_types = [
     #Combination with 0.6, 0.4
